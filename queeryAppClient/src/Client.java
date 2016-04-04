@@ -10,6 +10,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 public class Client {
 	private static Socket sock;
@@ -21,9 +22,13 @@ public class Client {
 		for(String s: args){
 			System.out.print(s + " ");
 		}
+		
 		System.out.println();
+		
 		try {
+			long start = System.nanoTime();
 			host = InetAddress.getLocalHost();
+			//host = InetAddress.getByName("108.23.32.15");
 			sock = new Socket(host, 4910);
 			PrintWriter out = new PrintWriter(sock.getOutputStream(), true);
 			BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
@@ -141,6 +146,15 @@ public class Client {
 				out.println(args[1]);
 				break;
 				
+			case "echo":
+				out.println("echo");
+			break;
+			
+			case "testUserName":
+				System.out.println(args);
+				out.println(args[0] + ", " + args[1]);
+				break;
+			
 			default:
 				System.out.println("Wrong params, usually \"command userName\"");
 				sock.close();
@@ -149,8 +163,11 @@ public class Client {
 				System.exit(1);//kill
 			}
 			//System.out.println(in.readLine());
-			while((temp = in.readLine()) != null && !in.ready()){;
+			while((temp = in.readLine()) != null && !in.ready()){
+				long end = System.nanoTime();
 				System.out.println(temp);
+				long durationInMs = TimeUnit.MILLISECONDS.convert((long) (end - start), TimeUnit.NANOSECONDS);
+				System.out.println("command completed in " + durationInMs + " ms");
 				//out.close();
 				//in.close();
 			}
