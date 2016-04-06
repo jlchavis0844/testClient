@@ -1,6 +1,11 @@
 
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -12,6 +17,11 @@ import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+
 public class Client {
 	private static Socket sock;
 	private static String temp;
@@ -19,16 +29,16 @@ public class Client {
 	public static void main(String[] args) {
 		
 		InetAddress host;
-		for(String s: args){
-			System.out.print(s + " ");
+		for(int i = 0; i < args.length; i++){
+			System.out.print("args[" + i + "] = " + args[i] + "\t");
 		}
 		
 		System.out.println();
 		
 		try {
 			long start = System.nanoTime();
-			host = InetAddress.getLocalHost();
-			//host = InetAddress.getByName("108.23.32.15");
+			//host = InetAddress.getLocalHost();
+			host = InetAddress.getByName("108.23.32.15");
 			sock = new Socket(host, 4910);
 			PrintWriter out = new PrintWriter(sock.getOutputStream(), true);
 			BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
@@ -155,6 +165,18 @@ public class Client {
 				out.println(args[0] + ", " + args[1]);
 				break;
 			
+			case "addPic":
+				addPic("addPic", args[1], args[2]);
+				break;
+				
+			case "updatePic":
+				addPic("updatePic", args[1], args[2]);
+				break;
+			
+			case "getPic":
+				getPic(args[1]);
+				break;
+				
 			default:
 				System.out.println("Wrong params, usually \"command userName\"");
 				sock.close();
@@ -270,5 +292,69 @@ public class Client {
 		setSSlider(out, rand, userName);
 	}
 	
+	public static void addPic(String command, String userName, String fileName){
+		BufferedImage bimg;
+		try {
+			Socket cSock = new Socket("localhost", 6066);
+			DataInputStream in = new DataInputStream(cSock.getInputStream());
+			DataOutputStream dout = new DataOutputStream(cSock.getOutputStream());
+			dout.writeUTF(command + ", " + userName);
+			
+			bimg = ImageIO.read(new File(fileName));
+			ImageIO.write(bimg,  "JPG", cSock.getOutputStream());
+			System.out.println("Image sent");
+			System.out.println(in.readUTF());
+			cSock.close();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}//end add pic
+	
+	public static void getPic(String userName){
+		 
+		try {
+			//InetAddress thost = InetAddress.getLocalHost();
+			InetAddress thost = InetAddress.getByName("108.23.32.15");
+			Socket cSock = new Socket(thost, 6066);
+			DataInputStream in = new DataInputStream(cSock.getInputStream());
+			DataOutputStream dout = new DataOutputStream(cSock.getOutputStream());
+			dout.writeUTF("getPic, " + userName);
+		
+			if(in.readUTF().equals("true")){
+				//BufferedImage bimg = ImageIO.read(cSock.getInputStream());
+				BufferedImage bimg = ImageIO.read(ImageIO.createImageInputStream(cSock.getInputStream()));
+				System.out.println("Image recieved from pic server");
+				
+	            JDialog dialog = new JDialog();
+	            //dialog.setUndecorated(true);
+	            JLabel label = new JLabel(new ImageIcon(bimg));
+	            dialog.add(label);
+	            dialog.pack();
+	            dialog.setVisible(true);
+			} else {
+				System.out.println("something went wrong");
+				cSock.close();
+			}
+			
+			new Thread(){
+				public void run(){
+					try {
+						sleep(5000);
+						System.exit(0);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}.start();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 }
 
